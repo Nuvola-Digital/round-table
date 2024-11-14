@@ -14,7 +14,7 @@ import { ConfigContext, isMainnet } from '../../cardano/config'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
 import { NotificationContext } from '../../components/notification'
 import { DerivationPath, RemoveWallet, Summary } from '../../components/wallet'
-import { getAvailableReward, isRegisteredOnChain, useUTxOSummaryQuery } from '../../cardano/query-api'
+import { getAvailableReward, isRegisteredOnChain, useUTxOSummaryQuery } from '../../cardano/react-query-api'
 import { NewTransaction } from '../../components/transaction'
 import { SingleCertificateBuilder, SingleInputBuilder, SingleWithdrawalBuilder } from '@dcspark/cardano-multiplatform-lib-browser'
 import { AddressableContent } from '../../components/address'
@@ -26,7 +26,7 @@ const AddressTable: FC<{
   const cardano = useCardanoMultiplatformLib()
 
   return (
-    <table className='table-auto w-full text-left'>
+    <table className='w-full text-left table-auto'>
       <thead className='bg-gray-100'>
         <tr>
           <th className='p-4'>{addressName}</th>
@@ -34,9 +34,9 @@ const AddressTable: FC<{
           <th className='p-4'>Staking Derivation Path</th>
         </tr>
       </thead>
-      <tbody className='divide-y text-sm'>
+      <tbody className='text-sm divide-y'>
         {addresses.map((address) => <tr key={address}>
-          <td className='px-4 py-2 items-center'>
+          <td className='items-center px-4 py-2'>
             <AddressableContent content={address} scanType='address' />
           </td>
           <td className='px-4 py-2'><DerivationPath keyHash={cardano?.parseAddress(address).payment_cred()?.to_keyhash()?.to_bytes()} /></td>
@@ -69,7 +69,7 @@ const Multisig: FC<{
     <Panel>
       <AddressTable addresses={addresses} addressName='Address for multisig' />
       <footer className='flex justify-end p-4 bg-gray-100'>
-        <button onClick={addAddress} className='flex space-x-1 px-4 py-2 bg-sky-700 text-white rounded'>
+        <button onClick={addAddress} className='flex px-4 py-2 space-x-1 text-white bg-sky-700 rounded'>
           Add Address
         </button>
       </footer>
@@ -106,13 +106,13 @@ const Edit: FC<{
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className='p-2 block border w-full rounded ring-sky-500 focus:ring-1'
+            className='block p-2 w-full rounded border ring-sky-500 focus:ring-1'
             placeholder='Write Name' />
         </label>
         <label className='block space-y-1'>
           <div>Description</div>
           <textarea
-            className='p-2 block border w-full rounded ring-sky-500 focus:ring-1'
+            className='block p-2 w-full rounded border ring-sky-500 focus:ring-1'
             placeholder='Describe the wallet'
             rows={4}
             value={description}
@@ -122,7 +122,7 @@ const Edit: FC<{
       </div>
       <footer className='flex justify-end p-4 bg-gray-100'>
         <button
-          className='px-4 py-2 bg-sky-700 text-white rounded disabled:border disabled:text-gray-400 disabled:bg-gray-100'
+          className='px-4 py-2 text-white bg-sky-700 rounded disabled:border disabled:text-gray-400 disabled:bg-gray-100'
           disabled={!canSave}
           onClick={save}>
           Save
@@ -137,10 +137,9 @@ const Spend: FC<{
   rewardAddress: string
   cardano: Cardano
 }> = ({ addresses, rewardAddress, cardano }) => {
-  const { loading, error, data } = useUTxOSummaryQuery({
-    variables: { addresses, rewardAddress },
-    fetchPolicy: 'network-only'
-  })
+  const { isLoading:loading, error, data } = useUTxOSummaryQuery({
+     addresses, rewardAddress
+    })
   const defaultChangeAddress = useMemo(() => {
     const address = addresses[0]
     if (!address) throw new Error('No address is found for change')
@@ -226,7 +225,7 @@ const Personal: FC<{
     <div className={className}>
       <Portal id='personal-subtab'>
         <div className='flex space-x-2'>
-          <nav className='text-sm rounded border-white border divide-x overflow-hidden'>
+          <nav className='overflow-hidden text-sm rounded border border-white divide-x'>
             <button
               onClick={() => setTab('summary')}
               disabled={tab === 'summary'}
@@ -246,7 +245,7 @@ const Personal: FC<{
               Spend
             </button>
           </nav>
-          <nav className='text-sm rounded border-white border divide-x overflow-hidden'>
+          <nav className='overflow-hidden text-sm rounded border border-white divide-x'>
             <select value={accountIndex} onChange={selectAccount} className='px-2 py-1 bg-sky-700'>
               {Array.from(wallet.personalAccounts, ([index, _]) => <option key={index} value={index}>
                 Account #{index}
@@ -264,7 +263,7 @@ const Personal: FC<{
             disabled={accountIndex === 0}
             onConfirm={deleteAccount}
             message={'Do you really want to remove Account #' + accountIndex}
-            className='px-4 py-2 bg-red-700 text-white rounded disabled:border disabled:text-gray-400 disabled:bg-gray-100'>
+            className='px-4 py-2 text-white bg-red-700 rounded disabled:border disabled:text-gray-400 disabled:bg-gray-100'>
             REMOVE
           </ConfirmModalButton>
         </footer>
@@ -272,7 +271,7 @@ const Personal: FC<{
       {tab === 'receive' && <Panel>
         <AddressTable addressName='Receiving Address' addresses={addresses} />
         <footer className='flex justify-end p-4 bg-gray-100'>
-          <button onClick={addAddress} className='flex space-x-1 px-4 py-2 bg-sky-700 text-white rounded'>
+          <button onClick={addAddress} className='flex px-4 py-2 space-x-1 text-white bg-sky-700 rounded'>
             Add Address
           </button>
         </footer>
@@ -309,10 +308,10 @@ const ShowPersonalWallet: NextPage = () => {
   return (
     <Layout>
       <Hero>
-        <h1 className='font-semibold text-lg'>{personalWallet.name}</h1>
+        <h1 className='text-lg font-semibold'>{personalWallet.name}</h1>
         <div>{personalWallet.description}</div>
         <div className='flex'>
-          <nav className='text-sm rounded border-white border divide-x overflow-hidden'>
+          <nav className='overflow-hidden text-sm rounded border border-white divide-x'>
             <button
               onClick={() => setTab('personal')}
               disabled={tab === 'personal'}
@@ -343,7 +342,7 @@ const ShowPersonalWallet: NextPage = () => {
       </Hero>
       {tab === 'personal' && <Personal wallet={personalWallet} className='space-y-2' />}
       {tab === 'multisig' && <>
-        <div className='p-4 text-yellow-700 bg-yellow-100 rounded shadow flex items-center space-x-1'>
+        <div className='flex items-center p-4 space-x-1 text-yellow-700 bg-yellow-100 rounded shadow'>
           <ExclamationTriangleIcon className='w-4' />
           <div>These addresses are only for multisig wallet making.</div>
           <strong className='font-semibold'>DO NOT USE THEM TO RECEIVE FUNDS.</strong>

@@ -10,7 +10,7 @@ import type { FC } from 'react'
 import { ConfigContext, isMainnet } from '../../cardano/config'
 import { Hero, Layout, Panel, Modal } from '../../components/layout'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useUTxOSummaryQuery, isRegisteredOnChain, getAvailableReward } from '../../cardano/query-api'
+import { useUTxOSummaryQuery, isRegisteredOnChain, getAvailableReward } from '../../cardano/react-query-api'
 import { ArrowDownTrayIcon, InformationCircleIcon } from '@heroicons/react/24/solid'
 import { EditMultisigWallet, RemoveWallet, Summary } from '../../components/wallet'
 import { NewTransaction } from '../../components/transaction'
@@ -40,9 +40,8 @@ const Spend: FC<{
     if (typeof policy === 'string') return builder.payment_key()
     return builder.native_script(cardano.getStakingNativeScriptFromPolicy(policy), cardano.lib.NativeScriptWitnessInfo.assume_signature_count())
   }, [cardano, policy])
-  const { loading, error, data } = useUTxOSummaryQuery({
-    variables: { addresses: [address], rewardAddress },
-    fetchPolicy: 'network-only'
+  const { isLoading:loading, error, data } = useUTxOSummaryQuery({
+    addresses: [address], rewardAddress ,
   })
 
   if (error) {
@@ -89,7 +88,7 @@ const NativeScriptPanel: FC<{
         <h2 className='font-semibold'>{title}</h2>
         <NativeScriptViewer
           cardano={cardano}
-          className='p-2 border rounded space-y-2 text-sm'
+          className='p-2 space-y-2 text-sm rounded border'
           headerClassName='font-semibold'
           ulClassName='space-y-1'
           verifyingData={verifyingData}
@@ -100,7 +99,7 @@ const NativeScriptPanel: FC<{
           blobParts={[nativeScript.to_bytes()]}
           options={{ type: 'application/cbor' }}
           download={filename}
-          className='flex space-x-1 px-4 py-2 border text-sky-700 rounded'>
+          className='flex px-4 py-2 space-x-1 text-sky-700 rounded border'>
           <ArrowDownTrayIcon className='w-4' />
           <span>Download</span>
         </DownloadButton>
@@ -195,7 +194,7 @@ const GetPolicy: NextPage = () => {
             {multisigWallet && multisigWallet.description.length > 0 && <div>{multisigWallet.description}</div>}
           </div>
           <div className='flex'>
-            <nav className='text-sm rounded border-white border divide-x overflow-hidden'>
+            <nav className='overflow-hidden text-sm rounded border border-white divide-x'>
               <button
                 onClick={() => setTab('summary')}
                 disabled={tab === 'summary'}

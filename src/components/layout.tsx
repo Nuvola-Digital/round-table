@@ -10,7 +10,7 @@ import { db } from '../db'
 import type { MultisigWallet, PersonalWallet, Policy } from '../db'
 import { useRouter } from 'next/router'
 import Image from 'next/image'
-import { getBalanceByPaymentAddresses, GraphQLURIContext, sumValues, usePaymentAddressesQuery } from '../cardano/query-api'
+import { getBalanceByPaymentAddresses, GraphQLURIContext, sumValues, usePaymentAddressesQuery } from '../cardano/react-query-api'
 import type { Value } from '../cardano/query-api'
 import { ADAAmount } from './currency'
 import { ChainProgress } from './time'
@@ -26,8 +26,8 @@ const Toggle: FC<{
   return (
     <label className='cursor-pointer'>
       <input className='hidden peer' type='checkbox' checked={isOn} onChange={onChange} />
-      <div className='flex border w-12 items-center rounded-full border-gray-500 bg-gray-500 peer-checked:bg-green-500 peer-checked:border-green-500 peer-checked:justify-end'>
-        <div className='h-6 w-6 rounded-full bg-white'></div>
+      <div className='flex items-center w-12 bg-gray-500 rounded-full border border-gray-500 peer-checked:bg-green-500 peer-checked:border-green-500 peer-checked:justify-end'>
+        <div className='w-6 h-6 bg-white rounded-full'></div>
       </div>
     </label>
   )
@@ -122,7 +122,7 @@ const NavLink: FC<{
 
 const PrimaryBar: FC = () => {
   return (
-    <aside className='flex flex-col w-20 bg-sky-900 items-center text-white'>
+    <aside className='flex flex-col items-center w-20 text-white bg-sky-900'>
       <NavLink
         href='/'
         onPageClassName='bg-sky-700'
@@ -161,11 +161,11 @@ const WalletLink: FC<{
   children?: ReactNode
 }> = ({ name, href, lovelace, isOnPage, children }) => {
   const info = (
-    <div className='flex space-x-1 justify-between items-center p-4 bg-inherit'>
+    <div className='flex justify-between items-center p-4 space-x-1 bg-inherit'>
       <div className='w-2/3'>
         <div className='truncate'>{name}</div>
         <div className='text-sm font-normal'>
-          {lovelace !== undefined ? <ADAAmount lovelace={lovelace} /> : <SpinnerIcon className='animate-spin w-4' />}
+          {lovelace !== undefined ? <ADAAmount lovelace={lovelace} /> : <SpinnerIcon className='w-4 animate-spin' />}
         </div>
       </div>
       <div>{children}</div>
@@ -173,7 +173,7 @@ const WalletLink: FC<{
   )
 
   if (isOnPage) return (
-    <div className='bg-sky-100 text-sky-700 font-semibold rounded-l overflow-hidden'>
+    <div className='overflow-hidden font-semibold text-sky-700 bg-sky-100 rounded-l'>
       {info}
     </div>
   )
@@ -256,13 +256,10 @@ const WalletList: FC = () => {
     return Array.from(result)
   }, [multisigWallets, personalWallets, config, cardano])
   const { data } = usePaymentAddressesQuery({
-    variables: { addresses },
-    fetchPolicy: 'cache-first',
-    pollInterval: 20000,
-    skip: addresses.length === 0
+    addresses
   })
   const balances: Map<string, Value> | undefined = useMemo(() => {
-    if (!data) return
+    if (!data?.paymentAddresses) return
 
     const balanceMap = new Map<string, Value>()
     data.paymentAddresses.forEach((paymentAddress) => {
@@ -275,12 +272,12 @@ const WalletList: FC = () => {
   }, [data])
 
   return (
-    <aside className='flex flex-col w-60 bg-sky-800 items-center text-white overflow-y-auto'>
+    <aside className='flex overflow-y-auto flex-col items-center w-60 text-white bg-sky-800'>
       <nav className='w-full font-semibold'>
         <NavLink
           href='/new'
           onPageClassName='bg-sky-700'
-          className='flex w-full p-4 items-center space-x-1 justify-center hover:bg-sky-700'>
+          className='flex justify-center items-center p-4 space-x-1 w-full hover:bg-sky-700'>
           <PlusIcon className='w-4' />
           <span>New Wallet</span>
         </NavLink>
@@ -324,16 +321,16 @@ const Layout: FC<{
     <div className='flex h-screen'>
       <PrimaryBar />
       <WalletList />
-      <div className='w-full bg-sky-100 overflow-y-auto'>
-        {!isMainnet(config) && <div className='p-1 bg-red-900 text-white text-center'>You are using {config.network} network</div>}
-        <div className='p-2 h-screen space-y-2'>
+      <div className='overflow-y-auto w-full bg-sky-100'>
+        {!isMainnet(config) && <div className='p-1 text-center text-white bg-red-900'>You are using {config.network} network</div>}
+        <div className='p-2 space-y-2 h-screen'>
           <ChainProgress />
           {children}
         </div>
       </div>
       <div id='modal-root'></div>
       <div className='flex flex-row-reverse'>
-        <NotificationCenter className='fixed space-y-2 p-4 w-80' />
+        <NotificationCenter className='fixed p-4 space-y-2 w-80' />
       </div>
     </div>
   )
@@ -346,7 +343,7 @@ const Modal: FC<{
 }> = ({ className, children, onBackgroundClick }) => {
   return (
     <Portal id='modal-root'>
-      <div onClick={onBackgroundClick} className='absolute bg-black bg-opacity-50 inset-0 flex justify-center items-center'>
+      <div onClick={onBackgroundClick} className='flex absolute inset-0 justify-center items-center bg-black bg-opacity-50'>
         <div onClick={(e) => e.stopPropagation()} className={className}>
           {children}
         </div>
@@ -379,11 +376,11 @@ const ConfirmModalButton: FC<{
   return (
     <>
       <button onClick={() => setModal(true)} className={className} disabled={disabled}>{children}</button>
-      {modal && <Modal className='bg-white p-4 rounded space-y-4 text-sm w-full md:w-1/3 lg:w-1/4' onBackgroundClick={closeModal}>
-        <h2 className='text-center text-lg font-semibold'>Please Confirm</h2>
-        <div className='text-center text-lg'>{message}</div>
+      {modal && <Modal className='p-4 space-y-4 w-full text-sm bg-white rounded md:w-1/3 lg:w-1/4' onBackgroundClick={closeModal}>
+        <h2 className='text-lg font-semibold text-center'>Please Confirm</h2>
+        <div className='text-lg text-center'>{message}</div>
         <nav className='flex justify-end space-x-2'>
-          <button className='border rounded p-2 text-sky-700' onClick={closeModal}>Cancel</button>
+          <button className='p-2 text-sky-700 rounded border' onClick={closeModal}>Cancel</button>
           <button onClick={confirm} className={className} disabled={disabled}>{children}</button>
         </nav>
       </Modal>}
@@ -412,13 +409,13 @@ const TextareaModalBox: FC<{
           onKeyDown={pressEnter}
           rows={6}
           placeholder={placeholder}
-          className='block w-full p-2 text-sm ring-sky-500 ring-inset focus:ring-1'>
+          className='block p-2 w-full text-sm ring-inset ring-sky-500 focus:ring-1'>
         </textarea>
       </div>
       <button
         onClick={() => onConfirm(value)}
         disabled={!value}
-        className='flex space-x-1 items-center justify-center w-full p-2 bg-sky-700 text-white disabled:text-gray-500 disabled:bg-gray-100'>
+        className='flex justify-center items-center p-2 space-x-1 w-full text-white bg-sky-700 disabled:text-gray-500 disabled:bg-gray-100'>
         {children}
       </button>
     </>
@@ -457,8 +454,8 @@ const OpenURL: FC<{
     <>
       <button onClick={openModal} className={className}>{children}</button>
       {modal && <Modal className='w-80' onBackgroundClick={closeModal}>
-        <div className='bg-white rounded overflow-hidden'>
-          <h2 className='bg-gray-100 p-2 text-center font-semibold'>Open Remote Content</h2>
+        <div className='overflow-hidden bg-white rounded'>
+          <h2 className='p-2 font-semibold text-center bg-gray-100'>Open Remote Content</h2>
           <TextareaModalBox placeholder='Transaction URL/Hex or multisig wallet URL' onConfirm={confirm}>
             <FolderOpenIcon className='w-4' />
             <span>Open</span>
@@ -485,9 +482,9 @@ const ConfigModalButton: FC<{
     <>
       <button onClick={openModal} className={className}>{children}</button>
       {modal && <Modal className='w-80' onBackgroundClick={closeModal}>
-        <div className='bg-white rounded overflow-hidden text-sm p-4 space-y-2'>
+        <div className='overflow-hidden p-4 space-y-2 text-sm bg-white rounded'>
           <div className='flex justify-between items-center'>
-            <div className='flex bg-sky-700 text-white divide-x border border-sky-700 rounded overflow-hidden'>
+            <div className='flex overflow-hidden text-white bg-sky-700 rounded border border-sky-700 divide-x'>
               <button className='p-1 disabled:bg-white disabled:text-sky-700' onClick={() => setSubTab('basic')} disabled={subTab === 'basic'}>Basic</button>
               <button className='p-1 disabled:bg-white disabled:text-sky-700' onClick={() => setSubTab('data')} disabled={subTab === 'data'}>Data</button>
               <button className='p-1 disabled:bg-white disabled:text-sky-700' onClick={() => setSubTab('sync')} disabled={subTab === 'sync'}>Sync</button>
@@ -514,13 +511,13 @@ const ConfigModalButton: FC<{
             <div>
               <strong>User Data Export/Import</strong>
               <div>User data has to be on the same network. For example, data exported from testnet cannot be imported to mainnet.</div>
-              <div className='text-red-500 font-semibold'>Data from V1 is not supported!</div>
+              <div className='font-semibold text-red-500'>Data from V1 is not supported!</div>
             </div>
             <div className='space-y-2'>
               <div>
                 <ExportUserDataButton />
               </div>
-              <div className='text-red-500 font-semibold'>Keep this file private!</div>
+              <div className='font-semibold text-red-500'>Keep this file private!</div>
             </div>
             <div>
               <strong>Import User Data</strong>
@@ -565,7 +562,7 @@ const InlineEditInput: FC<{
   if (isEditable) return (
     <textarea
       autoFocus={true}
-      className='p-2 block border w-full rounded ring-sky-500 focus:ring-1 text-inherit'
+      className='block p-2 w-full rounded border ring-sky-500 focus:ring-1 text-inherit'
       rows={rows}
       onBlur={blurHandler}
       onChange={changeHandler} value={inputValue} />
@@ -574,7 +571,7 @@ const InlineEditInput: FC<{
   return (
     <>
       <span>{value}</span>
-      <span><button className='text-sky-700 p-1' onClick={editHandler}><PencilSquareIcon className='w-4' /></button></span>
+      <span><button className='p-1 text-sky-700' onClick={editHandler}><PencilSquareIcon className='w-4' /></button></span>
     </>
   )
 }

@@ -13,7 +13,7 @@ import { db } from '../db'
 import type { MultisigWalletParams, Policy, PersonalWallet } from '../db'
 import { getMultisigWalletPath } from '../route'
 import { ExpiryBadge, SignatureBadge, StartBadge, TimelockExpiryViewer, TimelockStartViewer } from './native-script'
-import { getAssetName, getAvailableReward, getBalanceByPaymentAddresses, getCurrentDelegation, getPolicyId, useSummaryQuery } from '../cardano/query-api'
+import { getAssetName, getAvailableReward, getBalanceByPaymentAddresses, getCurrentDelegation, getPolicyId, useSummaryQuery } from '../cardano/react-query-api'
 import type { Value } from '../cardano/query-api'
 import { ADAAmount, AssetAmount } from './currency'
 import { StakePoolInfo } from './transaction'
@@ -120,17 +120,17 @@ const SlotInput: FC<{
 
   return (
     <div className={className}>
-      <NumberInput className='block w-full p-2 border rounded ring-sky-500 focus:ring-1' min={0} step={1000} value={slot} onCommit={setSlot} />
+      <NumberInput className='block p-2 w-full rounded border ring-sky-500 focus:ring-1' min={0} step={1000} value={slot} onCommit={setSlot} />
       <Calendar isRed={isLocked} selectedDate={date} onChange={changeDate} />
       <nav className='flex justify-end space-x-2'>
         <button
           onClick={cancel}
-          className='border rounded p-2 text-sky-700'>
+          className='p-2 text-sky-700 rounded border'>
           Cancel
         </button>
         <button
           onClick={() => confirm(slot)}
-          className='flex py-2 px-4 items-center space-x-1 rounded text-white bg-sky-700'>
+          className='flex items-center px-4 py-2 space-x-1 text-white bg-sky-700 rounded'>
           <span>Confirm</span>
         </button>
       </nav>
@@ -154,30 +154,30 @@ const AddTimelock: FC<{
   return (
     <div className={className}>
       <div className='flex'>
-        <nav className='border rounded border-sky-700 text-sm text-sky-700'>
+        <nav className='text-sm text-sky-700 rounded border border-sky-700'>
           <button
-            className='disabled:bg-sky-700 disabled:text-white px-2 py-1'
+            className='px-2 py-1 disabled:bg-sky-700 disabled:text-white'
             disabled={type === 'TimelockStart'}
             onClick={() => setType('TimelockStart')}>
             Start Slot
           </button>
           <button
-            className='disabled:bg-sky-700 disabled:text-white px-2 py-1'
+            className='px-2 py-1 disabled:bg-sky-700 disabled:text-white'
             disabled={type === 'TimelockExpiry'}
             onClick={() => setType('TimelockExpiry')}>
             Expiry Slot
           </button>
         </nav>
       </div>
-      {type === 'TimelockStart' && <div className='p-2 rounded bg-red-700 text-white'>
-        <h6 className='flex font-semibold space-x-1 items-center'>
+      {type === 'TimelockStart' && <div className='p-2 text-white bg-red-700 rounded'>
+        <h6 className='flex items-center space-x-1 font-semibold'>
           <ExclamationCircleIcon className='w-4' />
           <span>WARNING</span>
         </h6>
         <p>Be careful with this option. It returns false before the slot/time is reached. You might not want to wait too long to unlock it.</p>
       </div>}
-      {type === 'TimelockExpiry' && <div className='p-2 rounded bg-red-700 text-white'>
-        <h6 className='flex font-semibold space-x-1 items-center'>
+      {type === 'TimelockExpiry' && <div className='p-2 text-white bg-red-700 rounded'>
+        <h6 className='flex items-center space-x-1 font-semibold'>
           <ExclamationCircleIcon className='w-4' />
           <span>WARNING</span>
         </h6>
@@ -204,7 +204,7 @@ const AddressButton: FC<{
   return (
     <button onClick={click} className={className}>
       <div className='text-xs font-light break-all'>{address}</div>
-      <div className='flex items-center justify-between text-sm text-sky-700'>
+      <div className='flex justify-between items-center text-sm text-sky-700'>
         <div><DerivationPath keyHash={payment} /></div>
         <div><DerivationPath keyHash={staking} /></div>
       </div>
@@ -229,7 +229,7 @@ const AddressButtonGroup: FC<{
   return (
     <div className={className}>
       {showingAddresses.map((address) => <AddressButton key={address} className='p-2 space-y-1 hover:bg-sky-100' onClick={onClick} address={address} />)}
-      <div className='flex items-center justify-between text-sky-700 px-4'>
+      <div className='flex justify-between items-center px-4 text-sky-700'>
         <button
           onClick={() => setPage(page - 1)}
           disabled={page <= 1}
@@ -293,7 +293,7 @@ const AddAddress: FC<{
   return (
     <div className={className}>
       {!signingWallet && <>
-        <h2 className='font-semibold p-4 bg-gray-100 text-center'>Add Signer</h2>
+        <h2 className='p-4 font-semibold text-center bg-gray-100'>Add Signer</h2>
         {personalWallets?.map((wallet) => <button
           key={wallet.id}
           onClick={() => setSigningWallet(wallet)}
@@ -305,17 +305,17 @@ const AddAddress: FC<{
           <PencilSquareIcon className='w-6' />
           <span>Import</span>
         </button>
-        <button onClick={cancel} className='w-full text-center text-sky-700 p-2 hover:bg-sky-100'>Cancel</button>
+        <button onClick={cancel} className='p-2 w-full text-center text-sky-700 hover:bg-sky-100'>Cancel</button>
       </>}
       {signingWallet && <>
         <button
           onClick={() => setSigningWallet(undefined)}
-          className='flex w-full items-center justify-center space-x-1 text-sky-700 p-2 hover:bg-sky-100'>
+          className='flex justify-center items-center p-2 space-x-1 w-full text-sky-700 hover:bg-sky-100'>
           <ChevronLeftIcon className='w-4' />
           <span>Choose Others</span>
         </button>
         {signingAddresses && <>
-          {signingWallet !== 'import' && <h2 className='p-2 bg-gray-100 text-center'>{signingWallet.name}</h2>}
+          {signingWallet !== 'import' && <h2 className='p-2 text-center bg-gray-100'>{signingWallet.name}</h2>}
           <AddressButtonGroup className='divide-y' addresses={signingAddresses} onClick={addAddress} />
         </>}
         {!signingAddresses && <TextareaModalBox placeholder='Input receiving address' onConfirm={addAddress}>
@@ -424,8 +424,8 @@ const EditPolicy: FC<{
   return (
     <div className={className}>
       <nav className='flex space-x-2 text-sm'>
-        {policies && policies.length > 0 && <div className='flex border rounded divide-x items-center ring-sky-500 focus-within:ring-1'>
-          <select className='bg-white text-sky-700 px-2 py-1' value={policy.type} onChange={setPolicyType}>
+        {policies && policies.length > 0 && <div className='flex items-center rounded border divide-x ring-sky-500 focus-within:ring-1'>
+          <select className='px-2 py-1 text-sky-700 bg-white' value={policy.type} onChange={setPolicyType}>
             <option value="All">All</option>
             <option value="Any">Any</option>
             <option value="NofK">At least</option>
@@ -443,19 +443,19 @@ const EditPolicy: FC<{
         </div>}
         <button
           onClick={() => setModal('address')}
-          className='flex items-center text-sky-700 space-x-1 border rounded px-2 py-1'>
+          className='flex items-center px-2 py-1 space-x-1 text-sky-700 rounded border'>
           <PlusIcon className='w-4' />
           <span>Add Signer</span>
         </button>
         <button
           onClick={() => setModal('timelock')}
-          className='flex items-center text-sky-700 space-x-1 border rounded px-2 py-1'>
+          className='flex items-center px-2 py-1 space-x-1 text-sky-700 rounded border'>
           <PlusIcon className='w-4' />
           <span>Add Timelock</span>
         </button>
         <button
           onClick={() => addPolicy({ type: 'All', policies: [] })}
-          className='flex items-center text-sky-700 space-x-1 border rounded px-2 py-1'>
+          className='flex items-center px-2 py-1 space-x-1 text-sky-700 rounded border'>
           <PlusIcon className='w-4' />
           <span>Add Nested Policy</span>
         </button>
@@ -487,9 +487,9 @@ const EditPolicy: FC<{
         })}
       </ul>}
       {modal === 'address' && <Modal className='w-80' onBackgroundClick={closeModal}>
-        <AddAddress className='bg-white rounded divide-y overflow-hidden' cardano={cardano} add={addPolicy} cancel={closeModal} />
+        <AddAddress className='overflow-hidden bg-white rounded divide-y' cardano={cardano} add={addPolicy} cancel={closeModal} />
       </Modal>}
-      {modal === 'timelock' && <Modal className='bg-white p-4 rounded sm:w-full md:w-1/2 lg:w-1/3' onBackgroundClick={closeModal}>
+      {modal === 'timelock' && <Modal className='p-4 bg-white rounded sm:w-full md:w-1/2 lg:w-1/3' onBackgroundClick={closeModal}>
         <AddTimelock className='space-y-2' add={addPolicy} cancel={closeModal} />
       </Modal>}
     </div>
@@ -530,13 +530,13 @@ const EditMultisigWallet: FC<{
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className='p-2 block border w-full rounded ring-sky-500 focus:ring-1'
+            className='block p-2 w-full rounded border ring-sky-500 focus:ring-1'
             placeholder='Write Name' />
         </label>
         <label className='block space-y-1'>
           <div>Description</div>
           <textarea
-            className='p-2 block border w-full rounded ring-sky-500 focus:ring-1'
+            className='block p-2 w-full rounded border ring-sky-500 focus:ring-1'
             placeholder='Describe the wallet'
             rows={4}
             value={description}
@@ -556,7 +556,7 @@ const EditMultisigWallet: FC<{
       </div>
       <footer className='flex justify-end p-4 bg-gray-100'>
         <button
-          className='px-4 py-2 bg-sky-700 text-white rounded disabled:border disabled:text-gray-400 disabled:bg-gray-100'
+          className='px-4 py-2 text-white bg-sky-700 rounded disabled:border disabled:text-gray-400 disabled:bg-gray-100'
           disabled={!canSave}
           onClick={save}>
           Save
@@ -585,7 +585,7 @@ const RemoveWallet: FC<{
           <p>By removing the wallet you will just remove the record in your browser. The assets in it remain untouched. Type the wallet name below to confirm.</p>
         </div>
         <input
-          className='p-2 border rounded w-full ring-sky-500 focus:ring-1'
+          className='p-2 w-full rounded border ring-sky-500 focus:ring-1'
           type='text'
           placeholder='Type the wallet name to confirm'
           value={name}
@@ -593,7 +593,7 @@ const RemoveWallet: FC<{
       </div>
       <footer className='flex justify-end p-4 bg-gray-100'>
         <button
-          className='px-4 py-2 bg-red-700 text-white rounded disabled:border disabled:text-gray-400 disabled:bg-gray-100'
+          className='px-4 py-2 text-white bg-red-700 rounded disabled:border disabled:text-gray-400 disabled:bg-gray-100'
           disabled={walletName !== name}
           onClick={remove}>
           REMOVE
@@ -609,13 +609,12 @@ const Summary: FC<{
   children?: ReactNode
 }> = ({ addresses, rewardAddress, children }) => {
   const { data } = useSummaryQuery({
-    variables: { addresses, rewardAddress },
-    fetchPolicy: 'network-only'
+    addresses, rewardAddress,
   })
-
+  console.log('wallet.tsx summary', data);
   const result: { balance: Value, reward: bigint, delegation?: Delegation } | undefined = useMemo(() => {
-    if (!data) return
-    const { paymentAddresses, rewards_aggregate, withdrawals_aggregate, stakeRegistrations_aggregate, stakeDeregistrations_aggregate, delegations } = data
+    if (!data?.paymentAddresses) return;
+    const { paymentAddresses, rewards_aggregate, withdrawals_aggregate, stakeRegistrations_aggregate, stakeDeregistrations_aggregate, delegations } = data;
     return {
       balance: getBalanceByPaymentAddresses(paymentAddresses),
       reward: getAvailableReward(rewards_aggregate, withdrawals_aggregate),
@@ -632,7 +631,7 @@ const Summary: FC<{
   return (
     <Panel>
       <div className='p-4 space-y-2'>
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
+        <div className='grid grid-cols-1 gap-2 md:grid-cols-2'>
           <div className='space-y-1'>
             <h2 className='font-semibold'>Balance</h2>
             <div>
@@ -650,8 +649,8 @@ const Summary: FC<{
         </div>
         {balance.assets.size > 0 && <div className='space-y-1'>
           <h2 className='font-semibold'>Assets</h2>
-          <ul className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2'>
-            {Array.from(balance.assets, ([id, quantity]) => <li key={id} className='p-2 border rounded'>
+          <ul className='grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3'>
+            {Array.from(balance.assets, ([id, quantity]) => <li key={id} className='p-2 rounded border'>
               <AssetAmount
                 quantity={quantity}
                 decimals={0}

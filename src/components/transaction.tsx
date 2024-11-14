@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { MouseEventHandler, FC, ReactNode, ChangeEventHandler } from 'react'
 import { AssetAmount, ADAAmount, LabeledCurrencyInput, getADASymbol, ADAInput } from './currency'
-import { collectTransactionOutputs, decodeASCII, getAssetName, getBalanceByUTxOs, getPolicyId, useTransactionSummaryQuery, useStakePoolsQuery } from '../cardano/query-api'
+import { collectTransactionOutputs, decodeASCII, getAssetName, getBalanceByUTxOs, getPolicyId, useTransactionSummaryQuery, useStakePoolsQuery } from '../cardano/react-query-api'
 import type { Value, RecipientRegistry } from '../cardano/query-api'
 import { getResult, isAddressNetworkCorrect, newRecipient, toAddressString, toHex, toIter, useCardanoMultiplatformLib, verifySignature } from '../cardano/multiplatform-lib'
 import type { Cardano, Recipient } from '../cardano/multiplatform-lib'
@@ -254,12 +254,12 @@ const SignTxButton: FC<{
   return (
     <>
       <button onClick={openModal} className={className}>{children}</button>
-      {modal && <Modal className='bg-white divide-y text-center rounded w-80 overflow-hidden' onBackgroundClick={closeModal}>
+      {modal && <Modal className='overflow-hidden w-80 text-center bg-white rounded divide-y' onBackgroundClick={closeModal}>
         {!signingWallet && <>
           <header>
-            <h2 className='font-semibold p-4 bg-gray-100'>Choose a wallet</h2>
+            <h2 className='p-4 font-semibold bg-gray-100'>Choose a wallet</h2>
           </header>
-          <nav className='divide-y text-sky-700'>
+          <nav className='text-sky-700 divide-y'>
             {personalWallets?.map((wallet) => <button
               key={wallet.id}
               onClick={() => setSigningWallet(wallet)}
@@ -282,14 +282,14 @@ const SignTxButton: FC<{
               <CIP30WalletIcon wallet={wallet} className='w-4' />
               <span>{name.charAt(0).toUpperCase() + name.slice(1)}</span>
             </CIP30SignTxButton>)}
-            <button onClick={closeModal} className='w-full text-center text-sky-700 p-2 hover:bg-sky-100'>Cancel</button>
+            <button onClick={closeModal} className='p-2 w-full text-center text-sky-700 hover:bg-sky-100'>Cancel</button>
           </nav>
         </>}
         {signingWallet && <>
           <header>
             <button
               onClick={() => setSigningWallet(undefined)}
-              className='flex w-full items-center justify-center space-x-1 text-sky-700 p-2 hover:bg-sky-100'>
+              className='flex justify-center items-center p-2 space-x-1 w-full text-sky-700 hover:bg-sky-100'>
               <ChevronLeftIcon className='w-4' />
               <span>Choose Others</span>
             </button>
@@ -587,13 +587,13 @@ const TransactionLifetime: FC<{
   return (
     <div className='space-y-1'>
       <h2 className='font-semibold'>Lifetime</h2>
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-2'>
-        <div className='border rounded p-2 text-sm'>
-          {startSlot && <div className='flex items-center justify-between space-x-1'>
+      <div className='grid grid-cols-1 gap-2 lg:grid-cols-2'>
+        <div className='p-2 text-sm rounded border'>
+          {startSlot && <div className='flex justify-between items-center space-x-1'>
             <span>Start slot:</span>
             <TimelockStartViewer slot={startSlot} txStartSlot={currentSlot} />
           </div>}
-          {expirySlot && <div className='flex items-center justify-between space-x-1'>
+          {expirySlot && <div className='flex justify-between items-center space-x-1'>
             <span>Expiry slot:</span>
             <TimelockExpiryViewer slot={expirySlot} txExpirySlot={currentSlot} />
           </div>}
@@ -676,7 +676,7 @@ const TransactionViewer: FC<{
   }, [signatureMap, cardano, txHash])
   const fee = useMemo(() => BigInt(txBody.fee().to_str()), [txBody])
   const txInputs = useMemo(() => Array.from(toIter(txBody.inputs())), [txBody])
-  const { data } = useTransactionSummaryQuery({ variables: { hashes: txInputs.map((input) => input.transaction_id().to_hex()) } })
+  const { data } = useTransactionSummaryQuery( {hashes: txInputs.map((input) => input.transaction_id().to_hex()) })
   const txInputsRegistry = useMemo(() => data && collectTransactionOutputs(data.transactions), [data])
   const txRequiredSigners = useMemo(() => txBody.required_signers(), [txBody])
   useEffect(() => {
@@ -714,11 +714,11 @@ const TransactionViewer: FC<{
   return (
     <div className='space-y-2'>
       <Hero>
-        <h1 className='font-semibold text-lg'>Review Transaction</h1>
+        <h1 className='text-lg font-semibold'>Review Transaction</h1>
         <p>If the transaction is correct, you can sign and submit it. If this transaction needs more than one signers, you can share them this URL to get it signed and share the signatures.</p>
         <nav>
           <ShareCurrentURLButton
-            className='flex space-x-1 bg-white text-sky-700 py-1 px-2 rounded shadow w-32 justify-center items-center'>
+            className='flex justify-center items-center px-2 py-1 space-x-1 w-32 text-sky-700 bg-white rounded shadow'>
             <ShareIcon className='w-4' />
             <span>Copy URL</span>
           </ShareCurrentURLButton>
@@ -733,14 +733,14 @@ const TransactionViewer: FC<{
             </div>
           </div>
           <TransactionLifetime startSlot={startSlot} expirySlot={expirySlot} />
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
+          <div className='grid grid-cols-1 gap-2 md:grid-cols-2'>
             <div className='space-y-1'>
               <div className='font-semibold'>Inputs</div>
               <ul className='space-y-1 text-sm'>
-                {txInputs.map((input, index) => <li key={index} className='p-2 border rounded'>
+                {txInputs.map((input, index) => <li key={index} className='p-2 rounded border'>
                   <TransactionInputViewer className='space-y-1' input={input} registry={txInputsRegistry} />
                 </li>)}
-                {Array.from(txWithdrawals, ([address, amount], index) => <li key={index} className='p-2 border rounded space-y-1'>
+                {Array.from(txWithdrawals, ([address, amount], index) => <li key={index} className='p-2 space-y-1 rounded border'>
                   <AddressableContent content={address} scanType='stakekey' />
                   <div><ADAAmount lovelace={amount} /></div>
                 </li>)}
@@ -749,10 +749,10 @@ const TransactionViewer: FC<{
             <div className='space-y-1'>
               <div className='font-semibold'>Outputs</div>
               <ul className='space-y-1 text-sm'>
-                {txOutputs.map((txOutput, index) => <li key={index} className='p-2 border rounded'>
+                {txOutputs.map((txOutput, index) => <li key={index} className='p-2 rounded border'>
                   <RecipientViewer className='space-y-1' recipient={txOutput} />
                 </li>)}
-                <li className='p-2 border rounded space-x-1'>
+                <li className='p-2 space-x-1 rounded border'>
                   <ADAAmount lovelace={fee} />
                   <span>Fee</span>
                 </li>
@@ -769,14 +769,14 @@ const TransactionViewer: FC<{
           </div>}
           {txMessage && <div className='space-y-1'>
             <div className='font-semibold'>Message</div>
-            <div className='p-2 border rounded text-sm break-all'>{txMessage.map((line, index) => <p key={index}>{line}</p>)}</div>
+            <div className='p-2 text-sm break-all rounded border'>{txMessage.map((line, index) => <p key={index}>{line}</p>)}</div>
           </div>}
           {requiredPaymentKeys && requiredPaymentKeys.size > 0 && <div className='space-y-1'>
             <h2 className='font-semibold'>Required Payment Signatures</h2>
-            <ul className='space-y-1 rounded border p-2 text-sm'>
+            <ul className='p-2 space-y-1 text-sm rounded border'>
               {Array.from(requiredPaymentKeys, (keyHashHex, index) => <li key={index}>
                 <SignatureViewer
-                  className='flex space-x-1 items-center'
+                  className='flex items-center space-x-1'
                   signedClassName='text-green-500'
                   name={keyHashHex}
                   signature={cardano.buildSignatureSetHex(signatureMap.get(keyHashHex))} />
@@ -785,10 +785,10 @@ const TransactionViewer: FC<{
           </div>}
           {requiredStakingKeys && requiredStakingKeys.size > 0 && <div className='space-y-1'>
             <h2 className='font-semibold'>Required Staking Signatures</h2>
-            <ul className='space-y-1 rounded border p-2 text-sm'>
+            <ul className='p-2 space-y-1 text-sm rounded border'>
               {Array.from(requiredStakingKeys, (keyHashHex, index) => <li key={index}>
                 <SignatureViewer
-                  className='flex space-x-1 items-center'
+                  className='flex items-center space-x-1'
                   signedClassName='text-green-500'
                   name={keyHashHex}
                   signature={cardano.buildSignatureSetHex(signatureMap.get(keyHashHex))} />
@@ -802,7 +802,7 @@ const TransactionViewer: FC<{
                 <NativeScriptViewer
                   cardano={cardano}
                   verifyingData={verifyingData}
-                  className='p-2 border rounded space-y-2'
+                  className='p-2 space-y-2 rounded border'
                   headerClassName='font-semibold'
                   ulClassName='space-y-1'
                   nativeScript={script} />
@@ -810,27 +810,27 @@ const TransactionViewer: FC<{
             </ul>
           </div>}
         </div>
-        <footer className='flex p-4 bg-gray-100 justify-between items-center space-x-2'>
+        <footer className='flex justify-between items-center p-4 space-x-2 bg-gray-100'>
           <div className='flex space-x-2'>
             <SignTxButton
               transaction={transaction}
               requiredKeyHashHexes={Array.from(signerRegistry)}
               onSuccess={addSignatures}
-              className='flex items-center space-x-1 p-2 disabled:border rounded bg-sky-700 text-white disabled:bg-gray-100 disabled:text-gray-400'>
+              className='flex items-center p-2 space-x-1 text-white bg-sky-700 rounded disabled:border disabled:bg-gray-100 disabled:text-gray-400'>
               <PencilIcon className='w-4' />
               <span>Sign</span>
             </SignTxButton>
             <CopyVkeysButton
               cardano={cardano}
               vkeys={Array.from(signatureMap.values())}
-              className='flex items-center space-x-1 p-2 disabled:border rounded bg-sky-700 text-white disabled:bg-gray-100 disabled:text-gray-400'>
+              className='flex items-center p-2 space-x-1 text-white bg-sky-700 rounded disabled:border disabled:bg-gray-100 disabled:text-gray-400'>
               <ShareIcon className='w-4' />
               <span>Copy Signatures</span>
             </CopyVkeysButton>
           </div>
           <div className='flex space-x-2'>
             <SubmitTxButton
-              className='flex p-2 items-center space-x-1 bg-sky-700 text-white rounded disabled:border disabled:bg-gray-100 disabled:text-gray-400'
+              className='flex items-center p-2 space-x-1 text-white bg-sky-700 rounded disabled:border disabled:bg-gray-100 disabled:text-gray-400'
               transaction={signedTransaction}>
               <ArrowUpTrayIcon className='w-4' />
               <span>Submit</span>
@@ -854,17 +854,17 @@ const AddAssetButton: FC<{
   return (
     <div className='relative'>
       <button
-        className='flex text-sky-700 py-2 space-x-1 peer items-center disabled:text-gray-400'
+        className='flex items-center py-2 space-x-1 text-sky-700 peer disabled:text-gray-400'
         disabled={assets.length <= 0}>
         <PlusIcon className='w-4' />
         <span>Add Asset</span>
       </button>
-      <ul className='absolute divide-y bg-white text-sm max-h-64 border rounded shadow overflow-y-auto scale-0 z-50 peer-focus:scale-100 hover:scale-100'>
+      <ul className='overflow-y-auto absolute z-50 max-h-64 text-sm bg-white rounded border divide-y shadow scale-0 peer-focus:scale-100 hover:scale-100'>
         {assets.map(([id, quantity]) => (
           <li key={id}>
             <button
               onClick={() => onSelect(id)}
-              className='block w-full h-full p-2 hover:bg-sky-100'>
+              className='block p-2 w-full h-full hover:bg-sky-100'>
               <div className='flex space-x-2'>
                 <span>{decodeASCII(getAssetName(id))}</span>
                 <span>{quantity.toString()}</span>
@@ -893,7 +893,7 @@ const RecipientAddressInput: FC<{
 
   return (
     <div className={className}>
-      <label className='flex block border rounded overflow-hidden ring-sky-500 focus-within:ring-1'>
+      <label className='block flex overflow-hidden rounded border ring-sky-500 focus-within:ring-1'>
         <span className='p-2 bg-gray-100 border-r'>To</span>
         <input
           className={['p-2 block w-full disabled:bg-gray-100', isValid ? '' : 'text-red-500'].join(' ')}
@@ -939,11 +939,11 @@ const RecipientValueInput: FC<{
           max={value.lovelace + budget.lovelace}
           onChange={setLovelace}
           placeholder='0.000000' />
-        {minLovelace ? <p className='text-sm space-x-1'>
+        {minLovelace ? <p className='space-x-1 text-sm'>
           <span>At least</span>
           <button
             onClick={() => setLovelace(minLovelace)}
-            className='text-sky-700 font-semibold'>
+            className='font-semibold text-sky-700'>
             <ADAAmount lovelace={minLovelace} />
           </button>
           <span>is required</span>
@@ -1232,7 +1232,7 @@ const NewTransaction: FC<{
       </ul>
       {donatingValue && <div>
         <header className='flex justify-between px-4 py-2 bg-gray-100'>
-          <h2 className='font-semibold flex items-center space-x-1'>
+          <h2 className='flex items-center space-x-1 font-semibold'>
             <span>Donation</span>
             <HeartIcon className='w-4 text-pink-500' />
           </h2>
@@ -1266,7 +1266,7 @@ const NewTransaction: FC<{
         </header>
         <div className='p-4 space-y-1'>
           <div>{rewardAddress}</div>
-          <div className='p-2 border rounded'>
+          <div className='p-2 rounded border'>
             <ADAAmount lovelace={availableReward} />
           </div>
         </div>
@@ -1296,7 +1296,7 @@ const NewTransaction: FC<{
           </nav>
         </header>
         <div className='p-4 space-y-2'>
-          <div className='grid grid-cols-1 lg:grid-cols-4 gap-2'>
+          <div className='grid grid-cols-1 gap-2 lg:grid-cols-4'>
             {currentDelegation && <div className='space-y-1'>
               <strong className='font-semibold'>From</strong>
               <StakePoolInfo stakePool={currentDelegation} />
@@ -1317,11 +1317,11 @@ const NewTransaction: FC<{
           <div className='flex items-center space-x-2'>
             <span>Start slot:</span>
             {startSlot ? <EditTimelockStart slot={startSlot} /> : <span>N/A</span>}
-            <nav className='divide-x items-center border rounded text-xs text-sky-700'>
+            <nav className='items-center text-xs text-sky-700 rounded border divide-x'>
               <button onClick={() => setModal('start')} className='px-2 py-1'>Change</button>
               <button onClick={() => setStartSlot(undefined)} className='px-2 py-1'>Remove</button>
             </nav>
-            {modal === 'start' && <Modal className='bg-white p-4 rounded sm:w-full md:w-1/2 lg:w-1/3 space-y-1' onBackgroundClick={closeModal}>
+            {modal === 'start' && <Modal className='p-4 space-y-1 bg-white rounded sm:w-full md:w-1/2 lg:w-1/3' onBackgroundClick={closeModal}>
               <h2 className='font-semibold'>Start Slot</h2>
               <SlotInput className='space-y-2' confirm={confirmStartSlot} cancel={closeModal} initialSlot={startSlot} />
             </Modal>}
@@ -1329,11 +1329,11 @@ const NewTransaction: FC<{
           <div className='flex items-center space-x-2'>
             <span>Expire slot:</span>
             {expirySlot ? <EditTimelockExpiry slot={expirySlot} /> : <span>N/A</span>}
-            <nav className='divide-x items-center border rounded text-xs text-sky-700'>
+            <nav className='items-center text-xs text-sky-700 rounded border divide-x'>
               <button onClick={() => setModal('expiry')} className='px-2 py-1'>Change</button>
               <button onClick={() => setExpirySlot(undefined)} className='px-2 py-1'>Remove</button>
             </nav>
-            {modal === 'expiry' && <Modal className='bg-white p-4 rounded sm:w-full md:w-1/2 lg:w-1/3 space-y-1' onBackgroundClick={closeModal}>
+            {modal === 'expiry' && <Modal className='p-4 space-y-1 bg-white rounded sm:w-full md:w-1/2 lg:w-1/3' onBackgroundClick={closeModal}>
               <h2 className='font-semibold'>Expiry Slot</h2>
               <SlotInput className='space-y-2' confirm={confirmExpirySlot} cancel={closeModal} initialSlot={startSlot} />
             </Modal>}
@@ -1345,7 +1345,7 @@ const NewTransaction: FC<{
           <h2 className='font-semibold'>{allRecipients.length > 0 ? 'Change' : 'Send All'}</h2>
           <p className='text-sm'>{allRecipients.length > 0 ? 'The change caused by this transaction or all remaining assets in the treasury will be sent to this address (default to the treasury address). DO NOT MODIFY IT UNLESS YOU KNOW WHAT YOU ARE DOING!' : 'All assets in this treasury will be sent to this address.'}</p>
           {allRecipients.length > 0 && <p>
-            <label className='text-sm items-center space-x-1'>
+            <label className='items-center space-x-1 text-sm'>
               <input
                 type='checkbox'
                 checked={!isChangeSettingDisabled}
@@ -1361,7 +1361,7 @@ const NewTransaction: FC<{
             address={changeAddress}
             setAddress={setChangeAddress} />
           {!willSpendAll && allRecipients.length > 0 && <div className='space-y-1'>
-            <label className='flex block border rounded overflow-hidden ring-sky-500 focus-within:ring-1'>
+            <label className='block flex overflow-hidden rounded border ring-sky-500 focus-within:ring-1'>
               <span className='p-2 bg-gray-100 border-r'>Least Change ADA</span>
               <ADAInput
                 disabled={isChangeSettingDisabled}
@@ -1388,18 +1388,18 @@ const NewTransaction: FC<{
           <p className='text-sm'>Cannot exceed 64 bytes each line.</p>
         </header>
         <TransactionMessageInput
-          className='p-4 block w-full ring-sky-500 ring-inset focus:ring-1'
+          className='block p-4 w-full ring-inset ring-sky-500 focus:ring-1'
           onChange={setMessage}
           messageLines={message} />
       </div>
-      <footer className='flex p-4 bg-gray-100 items-center'>
+      <footer className='flex items-center p-4 bg-gray-100'>
         <div className='grow'>
           {txResult.isOk && <p className='flex space-x-1'>
             <span>Fee:</span>
             <span><ADAAmount lovelace={BigInt(txResult.data.body().fee().to_str())} /></span>
           </p>}
-          {!txResult.isOk && <p className='flex space-x-1 text-red-500 items-center'>
-            <XCircleIcon className='h-4 w-4' />
+          {!txResult.isOk && <p className='flex items-center space-x-1 text-red-500'>
+            <XCircleIcon className='w-4 h-4' />
             <span>{txResult.message === 'The address is invalid.' ? 'Some addresses are invalid.' : txResult.message}</span>
           </p>}
         </div>
@@ -1407,37 +1407,37 @@ const NewTransaction: FC<{
           <button
             disabled={!!donatingValue}
             onClick={donate}
-            className='p-2 rounded text-pink-800 bg-pink-100 border flex items-center space-x-1 disabled:bg-gray-100 disabled:text-gray-400'>
+            className='flex items-center p-2 space-x-1 text-pink-800 bg-pink-100 rounded border disabled:bg-gray-100 disabled:text-gray-400'>
             <HeartIcon className='w-4' />
             <span>Donate</span>
           </button>
           <button
-            className='p-2 rounded text-sky-700 border'
+            className='p-2 text-sky-700 rounded border'
             onClick={() => setRecipients(recipients.concat(newRecipient()))}>
             Add Recipient
           </button>
           <button
             disabled={withdrawAll || availableReward === BigInt(0)}
-            className='p-2 rounded text-sky-700 border disabled:bg-gray-100 disabled:text-gray-400'
+            className='p-2 text-sky-700 rounded border disabled:bg-gray-100 disabled:text-gray-400'
             onClick={() => setWithdrawAll(true)}>
             Withdraw
           </button>
           <button
             disabled={!isRegistered || !!stakeDeregistration}
-            className='p-2 rounded text-red-700 border disabled:bg-gray-100 disabled:text-gray-400'
+            className='p-2 text-red-700 rounded border disabled:bg-gray-100 disabled:text-gray-400'
             onClick={() => isRegistered && setStakeDeregistration(cardano.createDeregistrationCertificate(rewardAddress))}>
             Deregister
           </button>
           <button
             disabled={!!stakeDeregistration}
-            className='p-2 rounded text-sky-700 border disabled:bg-gray-100 disabled:text-gray-400'
+            className='p-2 text-sky-700 rounded border disabled:bg-gray-100 disabled:text-gray-400'
             onClick={() => setModal('delegation')}>
             Delegate
           </button>
-          {modal === 'delegation' && <Modal className='bg-white p-4 rounded w-full lg:w-1/2' onBackgroundClick={closeModal}>
+          {modal === 'delegation' && <Modal className='p-4 w-full bg-white rounded lg:w-1/2' onBackgroundClick={closeModal}>
             <StakePoolPicker className='space-y-2' delegate={delegate} />
           </Modal>}
-          {txResult.isOk && <Link className='flex p-2 rounded bg-sky-700 text-white space-x-1 items-center' href={getTransactionPath(txResult.data)}>
+          {txResult.isOk && <Link className='flex items-center p-2 space-x-1 text-white bg-sky-700 rounded' href={getTransactionPath(txResult.data)}>
             <span>Review</span>
             <ChevronRightIcon className='w-4' />
           </Link>}
@@ -1455,19 +1455,13 @@ const StakePoolPicker: FC<{
   const [id, setId] = useState('')
   const [page, setPage] = useState(1)
   const isIdBlank = id.trim().length === 0
-  const { data } = useStakePoolsQuery({
-    variables: {
-      id: isIdBlank ? undefined : id,
-      limit,
-      offset: (page - 1) * limit
-    }
-  })
+  const { data } = useStakePoolsQuery(isIdBlank ? undefined : id)
   const stakePools = data?.stakePools
 
   return (
     <div className={className}>
       <h2 className='text-lg font-semibold'>Staking Pools</h2>
-      <div className='flex items-center border rounded overflow-hidden ring-sky-500 focus-within:ring-1'>
+      <div className='flex overflow-hidden items-center rounded border ring-sky-500 focus-within:ring-1'>
         <input
           onChange={(e) => setId(e.target.value)}
           type='search'
@@ -1477,19 +1471,19 @@ const StakePoolPicker: FC<{
           <MagnifyingGlassIcon className='w-4' />
         </span>
       </div>
-      {stakePools && <ul className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2'>
+      {stakePools && <ul className='grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3'>
         {stakePools.map((stakePool) => <li key={stakePool.id}><StakePoolInfo stakePool={stakePool} delegate={delegate} /></li>)}
       </ul>}
-      {isIdBlank && data && <nav className='flex items-center justify-between'>
+      {isIdBlank && data && <nav className='flex justify-between items-center'>
         <button
-          className='px-2 py-1 border rounded text-sky-700 disabled:text-gray-100'
+          className='px-2 py-1 text-sky-700 rounded border disabled:text-gray-100'
           onClick={() => setPage(page - 1)}
           disabled={page === 1}>
           <ChevronLeftIcon className='w-4' />
         </button>
         <button
           onClick={() => setPage(page + 1)}
-          className='px-2 py-1 border rounded text-sky-700'>
+          className='px-2 py-1 text-sky-700 rounded border'>
           <ChevronRightIcon className='w-4' />
         </button>
       </nav>}
@@ -1530,10 +1524,10 @@ const StakePoolInfo: FC<{
   }, [stakePool, SMASH])
 
   return (
-    <div className='border rounded divide-y shadow'>
-      <header className='space-y-1 p-2'>
+    <div className='rounded border divide-y shadow'>
+      <header className='p-2 space-y-1'>
         <div className='text-sky-700'>
-          {loading && <SpinnerIcon className='animate-spin w-4' />}
+          {loading && <SpinnerIcon className='w-4 animate-spin' />}
           {!loading && metaData && <Link href={metaData.homepage} className='block truncate' target='_blank'>
             [<strong>{metaData.ticker}</strong>] {metaData.name}
           </Link>}
@@ -1541,24 +1535,24 @@ const StakePoolInfo: FC<{
         {!loading && !metaData && <div className='text-gray-700'>{isRetired ? 'Retired' : 'Unknown'}</div>}
         <div className='text-xs break-all'>{stakePool.id}</div>
       </header>
-      <div className='p-2 text-sm space-y-1'>
+      <div className='p-2 space-y-1 text-sm'>
         <div>
-          <div className='flex space-x-1 items-center justify-between'>
+          <div className='flex justify-between items-center space-x-1'>
             <span className='font-semibold'>Margin:</span>
             <span>{stakePool.margin * 100}%</span>
           </div>
-          <div className='flex space-x-1 items-center justify-between'>
+          <div className='flex justify-between items-center space-x-1'>
             <span className='font-semibold'>Fixed Fees:</span>
             <ADAAmount lovelace={BigInt(stakePool.fixedCost)} />
           </div>
-          <div className='flex space-x-1 items-center justify-between'>
+          <div className='flex justify-between items-center space-x-1'>
             <span className='font-semibold'>Pledge:</span>
             <ADAAmount lovelace={BigInt(stakePool.pledge)} />
           </div>
         </div>
         {delegate && <nav>
           <button
-            className='block w-full border rounded text-sm text-white p-1 bg-sky-700'
+            className='block p-1 w-full text-sm text-white bg-sky-700 rounded border'
             onClick={() => delegate(stakePool)}>
             Delegate
           </button>
