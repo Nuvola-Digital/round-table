@@ -10,8 +10,8 @@ import { db } from '../db'
 import type { MultisigWallet, PersonalWallet, Policy } from '../db'
 import { useRouter } from 'next/router'
 import Image from 'next/image'
-import { getBalanceByPaymentAddresses, GraphQLURIContext, sumValues, usePaymentAddressesQuery } from '../cardano/react-query-api'
-import type { Value } from '../cardano/query-api'
+import { getBalanceByPaymentAddresses, sumValues, usePaymentAddressesQuery } from '../cardano/react-query-api'
+import type { Value } from '../cardano/react-query-api'
 import { ADAAmount } from './currency'
 import { ChainProgress } from './time'
 import { getMultisigWalletPath, getPersonalWalletPath } from '../route'
@@ -476,7 +476,6 @@ const ConfigModalButton: FC<{
   const openModal = useCallback(() => setModal(true), [])
   const switchAutoSync = useCallback(() => setConfig({ ...config , autoSync: !config.autoSync }), [config, setConfig])
   const [subTab, setSubTab] = useState<'basic' | 'data' | 'sync'>('basic')
-  const [graphQLURI, setGraphQLURI] = useContext(GraphQLURIContext)
 
   return (
     <>
@@ -495,10 +494,6 @@ const ConfigModalButton: FC<{
             <div>
               <strong>Network</strong>
               <div>{config.network}</div>
-            </div>
-            <div>
-              <strong>GraphQL</strong>
-              <div><InlineEditInput value={graphQLURI} setValue={setGraphQLURI} rows={3} /></div>
             </div>
             {config.submitAPI && <div>
               <strong>Submit API</strong>

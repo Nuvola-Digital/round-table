@@ -270,10 +270,6 @@ const collectTransactionOutputs = (
     return collection.set(hash, subCollection);
   }, new Map());
 
-const GraphQLURIContext = createContext<[string, (uri: string) => void]>([
-  "",
-  () => {},
-]);
 
 export type { Value, RecipientRegistry };
 export {
@@ -292,5 +288,4 @@ export {
   sumValues,
   useTransactionSummaryQuery,
   collectTransactionOutputs,
-  GraphQLURIContext,
 };

@@ -14,7 +14,7 @@ import type { MultisigWalletParams, Policy, PersonalWallet } from '../db'
 import { getMultisigWalletPath } from '../route'
 import { ExpiryBadge, SignatureBadge, StartBadge, TimelockExpiryViewer, TimelockStartViewer } from './native-script'
 import { getAssetName, getAvailableReward, getBalanceByPaymentAddresses, getCurrentDelegation, getPolicyId, useSummaryQuery } from '../cardano/react-query-api'
-import type { Value } from '../cardano/query-api'
+import type { Value } from '../cardano/react-query-api'
 import { ADAAmount, AssetAmount } from './currency'
 import { StakePoolInfo } from './transaction'
 import type { Delegation } from '@cardano-graphql/client-ts/api'
@@ -611,7 +611,6 @@ const Summary: FC<{
   const { data } = useSummaryQuery({
     addresses, rewardAddress,
   })
-  console.log('wallet.tsx summary', data);
   const result: { balance: Value, reward: bigint, delegation?: Delegation } | undefined = useMemo(() => {
     if (!data?.paymentAddresses) return;
     const { paymentAddresses, rewards_aggregate, withdrawals_aggregate, stakeRegistrations_aggregate, stakeDeregistrations_aggregate, delegations } = data;

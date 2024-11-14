@@ -5,8 +5,8 @@ import { db } from '../db'
 import type { PersonalAccount, PersonalWallet, MultisigAccount, Policy, KeyHashIndex } from '../db'
 import { isMainnet } from './config'
 import type { Config } from './config'
-import type { Value } from './query-api'
-import { getAssetName, getPolicyId } from './query-api'
+import type { Value } from './react-query-api'
+import { getAssetName, getPolicyId } from './react-query-api'
 import { decryptWithPassword, harden } from './utils'
 
 const COIN_TYPE = 1815
