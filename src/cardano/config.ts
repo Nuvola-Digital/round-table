@@ -23,7 +23,7 @@ const isMainnet = (config: Config) => config.network === 'mainnet'
 
 const defaultSMASHMainnet = 'https://mainnet-smash.panl.org'
 const defaultSMASHTestnet = 'https://preview-smash.panl.org'
-const defaultSubmitURI = new URL(process.env.NEXT_PUBLIC_BACKEND_API || '').toString() + "/submit-transaction/";
+const defaultSubmitURI = new URL(process.env.NEXT_PUBLIC_BACKEND_API || 'https://blockfrost-backend.com').toString() + "/submit-transaction/";
 
 const defaultConfig: Config = {
   network: 'mainnet',
