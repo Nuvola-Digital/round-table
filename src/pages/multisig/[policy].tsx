@@ -41,7 +41,7 @@ const Spend: FC<{
     return builder.native_script(cardano.getStakingNativeScriptFromPolicy(policy), cardano.lib.NativeScriptWitnessInfo.assume_signature_count())
   }, [cardano, policy])
   const { isLoading:loading, error, data } = useUTxOSummaryQuery({
-    addresses: [address], rewardAddress ,
+    addresses: [address], rewardAddress 
   })
 
   if (error) {
@@ -96,7 +96,7 @@ const NativeScriptPanel: FC<{
       </div>
       <footer className='flex justify-end p-4 bg-gray-100'>
         <DownloadButton
-          blobParts={[nativeScript.to_bytes()]}
+          blobParts={[nativeScript.to_cbor_bytes()]}
           options={{ type: 'application/cbor' }}
           download={filename}
           className='flex px-4 py-2 space-x-1 text-sky-700 rounded border'>

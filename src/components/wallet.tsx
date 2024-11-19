@@ -198,8 +198,8 @@ const AddressButton: FC<{
   onClick?: (address: string) => void
 }> = ({ address, className, onClick }) => {
   const cardano = useCardanoMultiplatformLib()
-  const payment = useMemo(() => cardano?.parseAddress(address).payment_cred()?.to_keyhash()?.to_bytes(), [cardano, address])
-  const staking = useMemo(() => cardano?.parseAddress(address).staking_cred()?.to_keyhash()?.to_bytes(), [cardano, address])
+  const payment = useMemo(() => cardano?.parseAddress(address).payment_cred()?.as_pub_key()?.to_raw_bytes(), [cardano, address])
+  const staking = useMemo(() => cardano?.parseAddress(address).staking_cred()?.as_pub_key()?.to_raw_bytes(), [cardano, address])
   const click = useCallback(() => onClick && onClick(address), [address, onClick])
   return (
     <button onClick={click} className={className}>
@@ -275,11 +275,11 @@ const AddAddress: FC<{
       notify('error', 'Wrong network')
       return
     }
-    if (!addressObject.as_base()?.payment_cred().to_keyhash()) {
+    if (!addressObject.payment_cred()?.as_pub_key()) {
       notify('error', 'No key hash of payment')
       return
     }
-    if (!addressObject.as_base()?.stake_cred().to_keyhash()) {
+    if (!addressObject.staking_cred()?.as_pub_key()) {
       notify('error', 'No key hash of staking')
       return
     }
@@ -608,12 +608,11 @@ const Summary: FC<{
   rewardAddress: string
   children?: ReactNode
 }> = ({ addresses, rewardAddress, children }) => {
-  const { data } = useSummaryQuery({
-    addresses, rewardAddress,
-  })
+  const { data } = useSummaryQuery({ addresses, rewardAddress })
+
   const result: { balance: Value, reward: bigint, delegation?: Delegation } | undefined = useMemo(() => {
-    if (!data?.paymentAddresses) return;
-    const { paymentAddresses, rewards_aggregate, withdrawals_aggregate, stakeRegistrations_aggregate, stakeDeregistrations_aggregate, delegations } = data;
+    if (!data) return
+    const { paymentAddresses, rewards_aggregate, withdrawals_aggregate, stakeRegistrations_aggregate, stakeDeregistrations_aggregate, delegations } = data
     return {
       balance: getBalanceByPaymentAddresses(paymentAddresses),
       reward: getAvailableReward(rewards_aggregate, withdrawals_aggregate),

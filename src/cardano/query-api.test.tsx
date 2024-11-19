@@ -1,15 +1,20 @@
 import { renderHook, waitFor } from '@testing-library/react'
-import { getAssetName, getPolicyId, useUTxOSummaryQuery, usePaymentAddressesQuery, sumValues, useSummaryQuery, useTransactionSummaryQuery, useStakePoolsQuery } from './react-query-api'
-import type { Value } from './react-query-api'
+import { getAssetName, getPolicyId, useUTxOSummaryQuery, usePaymentAddressesQuery, sumValues, useSummaryQuery, useTransactionSummaryQuery, useStakePoolsQuery } from './query-api'
+import type { Value } from './query-api'
 import talkback from 'talkback/es6'
+import { ApolloProvider } from '@apollo/client'
 import type { FC, ReactNode } from 'react'
-import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
+import fetch from 'cross-fetch'
+import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client'
 
 const policyId = '126b8676446c84a5cd6e3259223b16a2314c5676b88ae1c1f8579a8f'
 const assetName = '7453554e444145'
 const assetId = policyId + assetName
 
-const createQueryClient = () => new QueryClient();
+const createApolloClient = (uri: string) => new ApolloClient({
+  link: new HttpLink({ uri, fetch }),
+  cache: new InMemoryCache()
+})
 
 test('sumValues', () => {
   const valueA: Value = { lovelace: BigInt(100), assets: new Map() }
@@ -31,8 +36,8 @@ test('getPolicyId', () => {
 })
 
 describe('GraphQL API', () => {
-  const client = createQueryClient();
-  const wrapper: FC<{ children: ReactNode }> = ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  const client = createApolloClient('http://localhost:8080')
+  const wrapper: FC<{ children: ReactNode }> = ({ children }) => <ApolloProvider client={client}>{children}</ApolloProvider>;
 
   const talkbackServer = talkback({
     host: 'https://preview-gql.junglestakepool.com/graphql',
@@ -46,9 +51,9 @@ describe('GraphQL API', () => {
   test('useUTxOSummaryQuery', async () => {
     const address = 'addr_test1xzuh59uc243wuhpkcnfdha3flvmx5guf8thkctv8l75u2zzap4eefgsu8h5selu2aaeu29vh96rf99wcp5f0x60ldx6s2ad79j'
     const rewardAddress = 'stake_test17pws6uu55gwrm6gvl79w7u79zktjap5jjhvq6yhnd8lkndgcsn5h4'
-    const { result } = renderHook(() => useUTxOSummaryQuery({  addresses: [address], rewardAddress }), { wrapper })
+    const { result } = renderHook(() => useUTxOSummaryQuery({ variables: { addresses: [address], rewardAddress } }), { wrapper })
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 10000 })
+    await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 10000 })
 
     const { data } = result.current
 
@@ -107,9 +112,9 @@ describe('GraphQL API', () => {
   test('useSummaryQuery', async () => {
     const address = 'addr_test1xzuh59uc243wuhpkcnfdha3flvmx5guf8thkctv8l75u2zzap4eefgsu8h5selu2aaeu29vh96rf99wcp5f0x60ldx6s2ad79j'
     const rewardAddress = 'stake_test17pws6uu55gwrm6gvl79w7u79zktjap5jjhvq6yhnd8lkndgcsn5h4'
-    const { result } = renderHook(() => useSummaryQuery({ addresses: [address], rewardAddress }), { wrapper }) 
+    const { result } = renderHook(() => useSummaryQuery({ variables: { addresses: [address], rewardAddress } }), { wrapper })
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 10000 })
+    await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 10000 })
 
     const { data } = result.current
 
@@ -139,9 +144,9 @@ describe('GraphQL API', () => {
 
   test('usePaymentAddressesQuery', async () => {
     const address = 'addr_test1xzuh59uc243wuhpkcnfdha3flvmx5guf8thkctv8l75u2zzap4eefgsu8h5selu2aaeu29vh96rf99wcp5f0x60ldx6s2ad79j'
-    const { result } = renderHook(() => usePaymentAddressesQuery({ addresses: [address]  }), { wrapper })
+    const { result } = renderHook(() => usePaymentAddressesQuery({ variables: { addresses: [address] } }), { wrapper })
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 10000 })
+    await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 10000 })
 
     const { data } = result.current
 
@@ -161,9 +166,9 @@ describe('GraphQL API', () => {
 
   test('useTransactionSummaryQuery', async () => {
     const txHash = '829c0c98a4037f214abe197276ef8b53be3e313b139e73a87f7a8d0ff70ff735'
-    const { result } = renderHook(() => useTransactionSummaryQuery({ hashes: [txHash] }), { wrapper }) 
+    const { result } = renderHook(() => useTransactionSummaryQuery({ variables: { hashes: [txHash] } }), { wrapper })
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 10000 })
+    await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 10000 })
 
     const { data } = result.current
 
@@ -182,9 +187,9 @@ describe('GraphQL API', () => {
 
   test('useStakePoolsQuery', async () => {
     const poolId = 'pool1ayc7a29ray6yv4hn7ge72hpjafg9vvpmtscnq9v8r0zh7azas9c'
-    const { result } = renderHook(() => useStakePoolsQuery(poolId), { wrapper })
+    const { result } = renderHook(() => useStakePoolsQuery({ variables: { id: poolId, limit: 1, offset: 0 } }), { wrapper })
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 10000 })
+    await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 10000 })
 
     const { data } = result.current
 

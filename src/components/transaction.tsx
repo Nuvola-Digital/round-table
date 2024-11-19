@@ -5,7 +5,7 @@ import { collectTransactionOutputs, decodeASCII, getAssetName, getBalanceByUTxOs
 import type { Value, RecipientRegistry } from '../cardano/react-query-api'
 import { getResult, isAddressNetworkCorrect, newRecipient, toAddressString, toHex, toIter, useCardanoMultiplatformLib, verifySignature } from '../cardano/multiplatform-lib'
 import type { Cardano, Recipient } from '../cardano/multiplatform-lib'
-import type { Certificate, Transaction, TransactionHash, TransactionInput, Vkeywitness, SingleInputBuilder, InputBuilderResult, SingleCertificateBuilder, CertificateBuilderResult, TransactionWitnessSet, TransactionOutputs, SingleWithdrawalBuilder, WithdrawalBuilderResult } from '@dcspark/cardano-multiplatform-lib-browser'
+import { type Certificate, type TransactionHash, type TransactionInput, type Vkeywitness, type SingleInputBuilder, type InputBuilderResult, type SingleCertificateBuilder, type CertificateBuilderResult, type TransactionWitnessSet, type TransactionOutputList, type TransactionOutput as CMLTransactionOutput, type SingleWithdrawalBuilder, type WithdrawalBuilderResult, Metadata, Transaction } from '@dcspark/cardano-multiplatform-lib-browser'
 import { ShareIcon, ArrowUpTrayIcon, PlusIcon, XMarkIcon, XCircleIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon, PencilIcon, WalletIcon, HeartIcon } from '@heroicons/react/24/solid'
 import Link from 'next/link'
 import { ConfigContext, donationAddress, isMainnet } from '../cardano/config'
@@ -27,6 +27,7 @@ import { db } from '../db'
 import type { PersonalWallet } from '../db'
 import { AddressableContent } from './address'
 import { useLiveSlot } from './time'
+import axios from 'axios'
 
 const CertificateListing: FC<{
   cardano: Cardano
@@ -65,7 +66,7 @@ const CertificateListing: FC<{
   if (cert) {
     const { RewardAddress } = cardano.lib
     const rewardAddress = RewardAddress.new(networkId, cert.stake_credential()).to_address().to_bech32()
-    const poolId = cert.pool_keyhash().to_bech32('pool')
+    const poolId = cert.pool().to_bech32('pool')
     return (
       <>
         <h2 className='font-semibold'>Stake Delegation</h2>
@@ -116,7 +117,7 @@ const RecipientViewer: FC<{
 }
 
 const getTxHash = (input: TransactionInput) => input.transaction_id().to_hex()
-const getTxIndex = (input: TransactionInput) => parseInt(input.index().to_str())
+const getTxIndex = (input: TransactionInput) => Number(input.index())
 
 const TransactionInputViewer: FC<{
   className?: string
@@ -206,7 +207,7 @@ const SignTxButton: FC<{
 }> = ({ className, onSuccess, transaction, requiredKeyHashHexes, children }) => {
   const cardano = useCardanoMultiplatformLib()
   const { notify } = useContext(NotificationContext)
-  const txHash = useMemo(() => cardano?.lib.hash_transaction(transaction.body()).to_bytes(), [cardano, transaction])
+  const txHash = useMemo(() => cardano?.lib.hash_transaction(transaction.body()).to_raw_bytes(), [cardano, transaction])
   const [modal, setModal] = useState(false)
   const closeModal = useCallback(() => setModal(false), [])
   const openModal = useCallback(() => setModal(true), [])
@@ -223,7 +224,7 @@ const SignTxButton: FC<{
         const { TransactionWitnessSetBuilder } = cardano.lib
         const builder = TransactionWitnessSetBuilder.new()
         vkeywitnesses.forEach((vkeywitness) => builder.add_vkey(vkeywitness))
-        onSuccess(toHex(builder.build()))
+        onSuccess(toHex(builder.build().to_canonical_cbor_bytes()))
         notify('success', 'Signed successfully')
       })
       .catch((error) => {
@@ -334,7 +335,7 @@ const CIP30SignTxButton: FC<{
           return
         }
         return walletAPI
-          .signTx(toHex(transaction), partialSign)
+          .signTx(toHex(transaction.to_canonical_cbor_bytes()), partialSign)
           .then(sign)
       })
       .catch((reason: Error | TxSignError) => {
@@ -358,34 +359,40 @@ const CIP30SignTxButton: FC<{
   )
 }
 
-const submitTx = (URL: string, body: Uint8Array) => fetch(URL, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/cbor' },
-  body
-}).then(async (response) => {
-  if (!response.ok) {
-    await response.text().then((message: string): Error => {
-      if (message.search(/\(ScriptWitnessNotValidatingUTXOW /) !== -1) {
-        throw {
-          name: 'InvalidSignatureError',
-          message: 'The signatures are invalid.'
-        }
-      }
-      if (message.search(/\(BadInputsUTxO /) !== -1) {
-        throw {
-          name: 'DuplicatedSpentError',
-          message: 'The UTxOs have been spent.'
-        }
-      }
-      console.error(message)
-      throw {
-        name: 'TxSubmissionError',
-        message: 'An unknown error. Check the log.'
-      }
-    })
-  }
-  return response
+const submitTx = (URL: string, cbor: string) => axios.post(URL,  {cbor})
+.then((response) => {
+  return response.data;
 })
+.catch(async (error) => {
+  if (error.response && error.response.data) {
+    const message: string = error.response.data.message;
+
+    if (message.includes("(ScriptWitnessNotValidatingUTXOW")) {
+      throw {
+        name: 'InvalidSignatureError',
+        message: 'The signatures are invalid.'
+      }
+    }
+    if (message.includes("(BadInputsUTxO")) {
+      throw {
+        name: 'DuplicatedSpentError',
+        message: 'The UTxOs have been spent.'
+      }
+    }
+    console.error(message)
+    throw {
+      name: 'TxSubmissionError',
+      message: 'An unknown error. Check the log.'
+    };
+  }
+
+  // Handle network or unexpected errors
+  console.error(error);
+  throw {
+    name: "NetworkError",
+    message: "A network error occurred.",
+  };
+});
 
 const SubmitTxButton: FC<{
   className?: string
@@ -399,7 +406,7 @@ const SubmitTxButton: FC<{
 
   const clickHandle: MouseEventHandler<HTMLButtonElement> = () => {
     setIsSubmitting(true)
-    const promises = config.submitAPI.map((URL) => submitTx(URL, transaction.to_bytes()))
+    const promises = config.submitAPI.map((URL) => submitTx(URL, transaction.to_cbor_hex()))
     Promise
       .any(promises)
       .then(() => {
@@ -477,7 +484,7 @@ const useAutoSync = (
         .get('cardano')
         .get(config.network)
         .get('transactions')
-        .get(toHex(txHash))
+        .get(toHex(txHash.to_raw_bytes()))
         .get(keyHashHex)
 
       if (vkeywitness) {
@@ -522,7 +529,7 @@ const TransactionLoader: FC<{
   content: Uint8Array
 }> = ({ content }) => {
   const cardano = useCardanoMultiplatformLib()
-  const transaction = useMemo(() => cardano?.lib.Transaction.from_bytes(content), [cardano, content])
+  const transaction = useMemo(() => cardano?.lib.Transaction.from_cbor_bytes(content), [cardano, content])
 
   if (!cardano || !transaction) return (
     <Modal><Loading /></Modal>
@@ -537,11 +544,11 @@ type SignatureMap = Map<string, Vkeywitness>
 
 const updateSignatureMap = (witnessSet: TransactionWitnessSet, signatureMap: SignatureMap, txHash: TransactionHash): SignatureMap => {
   const result = new Map(signatureMap)
-  const vkeyWitnessSet = witnessSet.vkeys()
+  const vkeyWitnessSet = witnessSet.vkeywitnesses()
   if (!vkeyWitnessSet) return result
 
   Array.from(toIter(vkeyWitnessSet), (vkeyWitness) => {
-    const publicKey = vkeyWitness.vkey().public_key()
+    const publicKey = vkeyWitness.vkey()
     const keyHashHex = publicKey.hash().to_hex()
     if (verifySignature(txHash, vkeyWitness)) {
       result.set(keyHashHex, vkeyWitness)
@@ -551,17 +558,17 @@ const updateSignatureMap = (witnessSet: TransactionWitnessSet, signatureMap: Sig
   return result
 }
 
-const getRecipientsFromCMLTransactionOutputs = (outputs: TransactionOutputs): Recipient[] => Array.from(toIter(outputs), (output, index) => {
+const getRecipientsFromCMLTransactionOutputs = (outputs: TransactionOutputList): Recipient[] => Array.from(toIter<CMLTransactionOutput>(outputs), (output: CMLTransactionOutput, index) => {
   const address = toAddressString(output.address())
   const amount = output.amount()
   const assets = new Map()
-  const multiAsset = amount.multiasset()
+  const multiAsset = amount.multi_asset()
   if (multiAsset) {
     Array.from(toIter(multiAsset.keys()), (policyId) => {
-      const _asset = multiAsset.get(policyId)
+      const _asset = multiAsset.get_assets(policyId)
       _asset && Array.from(toIter(_asset.keys()), (assetName) => {
-        const quantity = BigInt(multiAsset.get_asset(policyId, assetName).to_str())
-        const id = policyId.to_hex() + toHex(assetName.name())
+        const quantity = BigInt(_asset.get(assetName) ?? 0)
+        const id = policyId.to_hex() + toHex(assetName.to_raw_bytes())
         assets.set(id, (assets.get(id) ?? BigInt(0)) + quantity)
       })
     })
@@ -570,7 +577,7 @@ const getRecipientsFromCMLTransactionOutputs = (outputs: TransactionOutputs): Re
     id: index.toString(),
     address,
     value: {
-      lovelace: BigInt(amount.coin().to_str()),
+      lovelace: BigInt(amount.coin()),
       assets
     }
   }
@@ -580,6 +587,7 @@ const TransactionLifetime: FC<{
   startSlot?: number
   expirySlot?: number
 }> = ({ startSlot, expirySlot }) => {
+  console.log('expirySlot', expirySlot)
   const currentSlot = useLiveSlot()
 
   if (!startSlot && !expirySlot) return null
@@ -619,7 +627,7 @@ const TransactionViewer: FC<{
     if (!withdrawals) return result
     Array.from(toIter(withdrawals.keys()), (address) => {
       const amount = withdrawals.get(address)
-      if (amount) result.set(address.to_address().to_bech32(), BigInt(amount.to_str()))
+      if (amount) result.set(address.to_address().to_bech32(), BigInt(amount))
     })
     return result
   }, [txBody])
@@ -636,11 +644,11 @@ const TransactionViewer: FC<{
       const cert = certificate.as_stake_registration() ??
         certificate.as_stake_delegation() ??
         certificate.as_stake_deregistration()
-      const keyHashHex = cert?.stake_credential().to_keyhash()?.to_hex()
+      const keyHashHex = cert?.stake_credential().to_cbor_hex()
       keyHashHex && collection.add(keyHashHex)
     })
     txWithdrawals.forEach((_, address) => {
-      const keyHashHex = cardano.parseAddress(address).as_reward()?.payment_cred().to_keyhash()?.to_hex()
+      const keyHashHex = cardano.parseAddress(address).payment_cred()?.as_pub_key()?.to_hex()
       keyHashHex && collection.add(keyHashHex)
     })
 
@@ -650,7 +658,7 @@ const TransactionViewer: FC<{
   const signerRegistry = useMemo(() => {
     const signers = new Set<string>()
     nativeScripts?.forEach((script) => {
-      Array.from(toIter(script.get_required_signers()), (signer) => signers.add(toHex(signer)))
+      Array.from(toIter(script.get_required_signers()), (signer) => signers.add(toHex(signer.to_raw_bytes())))
     })
     requiredPaymentKeys?.forEach((keyHash) => signers.add(keyHash))
     requiredStakingKeys?.forEach((keyHash) => signers.add(keyHash))
@@ -667,16 +675,16 @@ const TransactionViewer: FC<{
   const addSignatures = useCallback((witnessSetHex: string) => {
     const result = getResult(() => {
       const bytes = Buffer.from(witnessSetHex, 'hex')
-      return cardano.lib.TransactionWitnessSet.from_bytes(bytes)
+      return cardano.lib.TransactionWitnessSet.from_cbor_bytes(bytes)
     })
 
     if (!result.isOk) return
 
     setSignatureMap(updateSignatureMap(result.data, signatureMap, txHash))
   }, [signatureMap, cardano, txHash])
-  const fee = useMemo(() => BigInt(txBody.fee().to_str()), [txBody])
+  const fee = useMemo(() => txBody.fee(), [txBody])
   const txInputs = useMemo(() => Array.from(toIter(txBody.inputs())), [txBody])
-  const { data } = useTransactionSummaryQuery( {hashes: txInputs.map((input) => input.transaction_id().to_hex()) })
+  const { data } = useTransactionSummaryQuery({ hashes: txInputs.map((input) => input.transaction_id().to_hex()) })
   const txInputsRegistry = useMemo(() => data && collectTransactionOutputs(data.transactions), [data])
   const txRequiredSigners = useMemo(() => txBody.required_signers(), [txBody])
   useEffect(() => {
@@ -685,24 +693,22 @@ const TransactionViewer: FC<{
       const hash = getTxHash(input)
       const index = getTxIndex(input)
       const address = txInputsRegistry?.get(hash)?.get(index)?.address
-      const keyHash = address && cardano.parseAddress(address).payment_cred()?.to_keyhash()?.to_hex()
+      const keyHash = address && cardano.parseAddress(address).payment_cred()?.as_pub_key()?.to_hex()
       keyHash && keyHashes.add(keyHash)
     })
     if (txRequiredSigners) {
       Array.from(toIter(txRequiredSigners))
-        .map(toHex)
+        .map((signer) => toHex(signer.to_raw_bytes()))
         .forEach(keyHashes.add.bind(keyHashes));
     }
     setRequiredPaymentKeys(keyHashes)
   }, [cardano, txInputs, txInputsRegistry, txRequiredSigners, setRequiredPaymentKeys])
   const txOutputs: Recipient[] = useMemo(() => getRecipientsFromCMLTransactionOutputs(txBody.outputs()), [txBody])
   const startSlot = useMemo(() => {
-    const slot = txBody.validity_start_interval()?.to_str()
-    if (slot) return parseInt(slot)
+    return txBody.validity_interval_start() ? Number(txBody.validity_interval_start()) : undefined
   }, [txBody])
   const expirySlot = useMemo(() => {
-    const slot = txBody.ttl()?.to_str()
-    if (slot) return parseInt(slot)
+    return txBody.ttl() ? Number(txBody.ttl()) : undefined
   }, [txBody])
   const verifyingData: VerifyingData = useMemo(() => ({
     signatures: signatureMap,
@@ -1098,7 +1104,8 @@ const NewTransaction: FC<{
         msg: message
       })
       let data = AuxiliaryData.new()
-      data.add_json_metadatum_with_schema(cardano.getMessageLabel(), value, MetadataJsonSchema.NoConversions)
+      // TODO
+      // data.add_metadata(Metadata.new().).add_json_metadatum_with_schema(cardano.getMessageLabel(), value, MetadataJsonSchema.NoConversions)
       return data
     }
   }, [cardano, message])
@@ -1169,7 +1176,7 @@ const NewTransaction: FC<{
   const txResult = useMemo(() => getResult(() => {
     if (inputs.length === 0) throw new Error('No UTxO is spent.')
 
-    const { BigNum, ChangeSelectionAlgo, SingleCertificateBuilder } = cardano.lib
+    const { ChangeSelectionAlgo, SingleCertificateBuilder } = cardano.lib
     const txBuilder = cardano.createTxBuilder(protocolParameters)
 
     inputs.forEach((input) => {
@@ -1194,8 +1201,8 @@ const NewTransaction: FC<{
 
     if (auxiliaryData) txBuilder.add_auxiliary_data(auxiliaryData)
 
-    if (startSlot) txBuilder.set_validity_start_interval(BigNum.from_str(startSlot.toString()))
-    if (expirySlot) txBuilder.set_ttl(BigNum.from_str(expirySlot.toString()))
+    if (startSlot) txBuilder.set_validity_start_interval(BigInt(startSlot))
+    if (expirySlot) txBuilder.set_ttl(BigInt(expirySlot))
 
     return txBuilder.build(ChangeSelectionAlgo.Default, cardano.parseAddress(changeAddress)).build_unchecked()
   }), [allRecipients, cardano, changeAddress, auxiliaryData, protocolParameters, inputs, stakeRegistration, stakeDelegation, buildInputResult, buildCertResult, buildWithdrawalResult, startSlot, expirySlot, availableReward, rewardAddress, withdrawAll, stakeDeregistration])
@@ -1396,7 +1403,7 @@ const NewTransaction: FC<{
         <div className='grow'>
           {txResult.isOk && <p className='flex space-x-1'>
             <span>Fee:</span>
-            <span><ADAAmount lovelace={BigInt(txResult.data.body().fee().to_str())} /></span>
+            <span><ADAAmount lovelace={BigInt(txResult.data.body().fee())} /></span>
           </p>}
           {!txResult.isOk && <p className='flex items-center space-x-1 text-red-500'>
             <XCircleIcon className='w-4 h-4' />

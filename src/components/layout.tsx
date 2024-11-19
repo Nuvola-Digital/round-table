@@ -259,7 +259,7 @@ const WalletList: FC = () => {
     addresses
   })
   const balances: Map<string, Value> | undefined = useMemo(() => {
-    if (!data?.paymentAddresses) return
+    if (!data) return
 
     const balanceMap = new Map<string, Value>()
     data.paymentAddresses.forEach((paymentAddress) => {
@@ -480,7 +480,7 @@ const ConfigModalButton: FC<{
   return (
     <>
       <button onClick={openModal} className={className}>{children}</button>
-      {modal && <Modal className='w-80' onBackgroundClick={closeModal}>
+      {modal && <Modal className='w-160' onBackgroundClick={closeModal}>
         <div className='overflow-hidden p-4 space-y-2 text-sm bg-white rounded'>
           <div className='flex justify-between items-center'>
             <div className='flex overflow-hidden text-white bg-sky-700 rounded border border-sky-700 divide-x'>
@@ -495,6 +495,7 @@ const ConfigModalButton: FC<{
               <strong>Network</strong>
               <div>{config.network}</div>
             </div>
+            
             {config.submitAPI && <div>
               <strong>Submit API</strong>
               <ul>

@@ -39,8 +39,8 @@ const AddressTable: FC<{
           <td className='items-center px-4 py-2'>
             <AddressableContent content={address} scanType='address' />
           </td>
-          <td className='px-4 py-2'><DerivationPath keyHash={cardano?.parseAddress(address).payment_cred()?.to_keyhash()?.to_bytes()} /></td>
-          <td className='px-4 py-2'><DerivationPath keyHash={cardano?.parseAddress(address).staking_cred()?.to_keyhash()?.to_bytes()} /></td>
+          <td className='px-4 py-2'><DerivationPath keyHash={cardano?.parseAddress(address).payment_cred()?.as_pub_key()?.to_raw_bytes()} /></td>
+          <td className='px-4 py-2'><DerivationPath keyHash={cardano?.parseAddress(address).staking_cred()?.as_pub_key()?.to_raw_bytes()} /></td>
         </tr>)}
       </tbody>
     </table>
@@ -138,8 +138,8 @@ const Spend: FC<{
   cardano: Cardano
 }> = ({ addresses, rewardAddress, cardano }) => {
   const { isLoading:loading, error, data } = useUTxOSummaryQuery({
-     addresses, rewardAddress
-    })
+    addresses, rewardAddress 
+  })
   const defaultChangeAddress = useMemo(() => {
     const address = addresses[0]
     if (!address) throw new Error('No address is found for change')

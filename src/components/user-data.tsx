@@ -112,7 +112,9 @@ const ImportUserData: FC = () => {
     event.preventDefault()
     const reader = new FileReader()
     reader.onload = async (e) => {
+      console.log(e)
       const text = (e.target?.result)
+      console.log(text);
       if (typeof text !== 'string') {
         notify('error', 'Invalid backup file')
         return
@@ -121,11 +123,13 @@ const ImportUserData: FC = () => {
     }
     const files = event.target.files
     if (files) {
+      console.log(files);
       reader.readAsText(files[0])
     }
   }, [notify])
 
   const click: MouseEventHandler<HTMLButtonElement> = useCallback(() => {
+    console.log('click');
     if (!userDataJSON) return;
     const userData = deserializeUserData(userDataJSON)
     if (userData.network !== config.network) {
@@ -153,6 +157,7 @@ const ImportUserData: FC = () => {
       <input
         type='file'
         onChange={change} />
+      <br />
       <button
         className='p-2 bg-sky-700 text-white disabled:text-gray-400 disabled:bg-gray-100'
         onClick={click}>

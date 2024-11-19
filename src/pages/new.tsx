@@ -118,7 +118,7 @@ const RecoverHDWallet: FC<{
     const phrase = words.join(' ')
     const entropy = Buffer.from(mnemonicToEntropy(phrase), 'hex')
     const key = cardano.lib.Bip32PrivateKey.from_bip39_entropy(entropy, Buffer.from(BIP32Passphrase, 'utf8'))
-    return SHA256Digest(key.as_bytes())
+    return SHA256Digest(key.to_raw_bytes())
       .then(async (buffer) => {
         const hash = new Uint8Array(buffer)
         const duplicate = await db.personalWallets.get({ hash })
@@ -183,7 +183,7 @@ const SavePersonalWallet: FC<{
   const [repeatPassword, setRepeatPassword] = useState('')
 
   const create = useCallback(async () => {
-    const rootKeyBytes = rootKey.as_bytes()
+    const rootKeyBytes = rootKey.to_raw_bytes()
     const hash = new Uint8Array(await SHA256Digest(rootKeyBytes))
 
     encryptWithPassword(rootKeyBytes, password, id)

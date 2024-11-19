@@ -4,17 +4,14 @@ import {
   ConfigContext,
   config,
   isMainnet,
-  defaultGraphQLURI,
 } from "../cardano/config";
 import Head from "next/head";
 import {
   NotificationContext,
   useNotification,
 } from "../components/notification";
-import { ApolloClient, ApolloProvider, InMemoryCache } from "@apollo/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
 
 function MyApp({ Component, pageProps }: AppProps) {
   const queryClient = new QueryClient();
@@ -28,12 +25,12 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <ConfigContext.Provider value={configContext}>
       <QueryClientProvider client={queryClient}>
-          <NotificationContext.Provider value={notification}>
-              <Head>
-                <title>{title}</title>
-              </Head>
-              <Component {...pageProps} />
-          </NotificationContext.Provider>
+        <NotificationContext.Provider value={notification}>
+          <Head>
+            <title>{title}</title>
+          </Head>
+          <Component {...pageProps} />
+        </NotificationContext.Provider>
       </QueryClientProvider>
     </ConfigContext.Provider>
   );

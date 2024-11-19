@@ -15,7 +15,7 @@ function getPersonalWalletPath(id: number): string {
 }
 
 function getTransactionPath(transcation: Transaction): string {
-  const base64CBOR = encodeCardanoData(transcation, 'base64')
+  const base64CBOR = encodeCardanoData(transcation.to_cbor_bytes(), 'base64')
   return ['/base64', encodeURIComponent(base64CBOR)].join('/')
 }
 
